@@ -53358,7 +53358,7 @@ var eventemitter2 = {exports: {}};
 	    var obj = {};
 	    var key;
 	    var len = keys.length;
-	    var valuesCount = values ? value.length : 0;
+	    var valuesCount = values ? values.length : 0;
 	    for (var i = 0; i < len; i++) {
 	      key = keys[i];
 	      obj[key] = i < valuesCount ? values[i] : undefined$1;
@@ -57692,10 +57692,12 @@ var Urdf = /*@__PURE__*/(function (superclass) {
           }
           if (visual.geometry.type === ROSLIB__namespace.URDF_MESH) {
             var uri = visual.geometry.filename;
-            // strips package://
-            var tmpIndex = uri.indexOf('package://');
+            // in ROS2 filename is in absolute local path
+            // e.g (file:/home/user/ros2_ws/install/xarm_description/share/xarm_description/meshes/xarm6/visual/base.stl)
+            // '/share/' seems to be the common keyword, hence we strip it
+            var tmpIndex = uri.indexOf('/share/');
             if (tmpIndex !== -1) {
-              uri = uri.substr(tmpIndex + ('package://').length);
+              uri = uri.substr(tmpIndex + ('/share/').length);
             }
             var fileType = uri.substr(-3).toLowerCase();
 
