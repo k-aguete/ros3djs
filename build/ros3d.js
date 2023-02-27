@@ -55884,6 +55884,46 @@ var ROS3D = (function (exports, ROSLIB) {
 	  };
 	}
 
+	class FlatCircle extends THREE.Object3D {
+
+	  /**
+	   * Create a grid object.
+	   *
+	   * @constructor
+	   * @param options - object with following keys:
+	   *
+	   *  * radius (optional) - The circle radius, default is 1
+	   *  * color (optional) - The circle color in hex or string format, default is '#cccccc'
+	   *  * segments (optional) - The number of circle segments, the higher the smoother the edge. default is 32
+	   *  * position (optional) - Cartesian position of the center of circle, default is {x: 0, y: 0, z: 0}
+	   *  * orientation (optional) - The euler orientation of the circle, default is {x: 0, y: 0, z: 0}
+	   */
+	  constructor(options) {
+	    options = options || {};
+	    var radius = options.radius || 1;
+	    var segments = options.segments || 32;
+	    var color = options.color || '#cccccc';
+	    var position = options.position || { x: 0, y: 0, z: 0 };
+	    var orientation = options.orientation || { x: 0, y: 0, z: 0 };
+
+	    super();
+
+	    var material = new THREE.MeshBasicMaterial({
+	      color: color,
+	    });
+
+	    var geometry = new THREE.CylinderGeometry(radius, radius, 0.01, segments, 1);
+
+	    var mesh = new THREE.Mesh(geometry, material);
+	    mesh.rotation.setFromVector3(
+	      new THREE.Vector3(orientation.x, orientation.y, orientation.z)
+	    );
+	    mesh.position.set(position.x, position.y, position.z);
+
+	    this.add(mesh);
+	  };
+	}
+
 	/**
 	 * @fileOverview
 	 * @author Russell Toris - rctoris@wpi.edu
@@ -58150,6 +58190,14 @@ var ROS3D = (function (exports, ROSLIB) {
 	          }
 	          if (visual.geometry.type === ROSLIB__namespace.URDF_MESH) {
 	            var uri = visual.geometry.filename;
+	            
+	            try {
+	              var uriTmp = new URL(uri);
+	              uri = uriTmp.pathname;
+	            } catch (error) {
+	              console.warn('ROS3D mesh path parsing error: ', error);
+	            }
+
 	            // in ROS2 filename is in absolute local path
 	            // e.g (file:/home/user/ros2_ws/install/xarm_description/share/xarm_description/meshes/xarm6/visual/base.stl)
 	            // '/share/' seems to be the common keyword, hence we strip it
@@ -58157,6 +58205,7 @@ var ROS3D = (function (exports, ROSLIB) {
 	            if (tmpIndex !== -1) {
 	              uri = uri.substr(tmpIndex + ('/share/').length);
 	            }
+	            
 	            var fileType = uri.substr(-3).toLowerCase();
 
 	            if (MeshLoader.loaders[fileType]) {
@@ -59231,20 +59280,26 @@ var ROS3D = (function (exports, ROSLIB) {
 	    var far = options.far || 1000;
 	    var alpha = options.alpha || 1.0;
 	    var cameraPosition = options.cameraPose || {
-	      x : 3,
-	      y : 3,
-	      z : 3
+	      x: 3,
+	      y: 3,
+	      z: 3,
 	    };
 	    var cameraZoomSpeed = options.cameraZoomSpeed || 0.5;
-	    var displayPanAndZoomFrame = (options.displayPanAndZoomFrame === undefined) ? true : !!options.displayPanAndZoomFrame;
+	    var displayPanAndZoomFrame =
+	      options.displayPanAndZoomFrame === undefined
+	        ? true
+	        : !!options.displayPanAndZoomFrame;
 	    var lineTypePanAndZoomFrame = options.lineTypePanAndZoomFrame || 'full';
 
 	    // create the canvas to render to
 	    this.renderer = new THREE.WebGLRenderer({
-	      antialias : antialias,
-	      alpha: true
+	      antialias: antialias,
+	      alpha: true,
 	    });
-	    this.renderer.setClearColor(parseInt(background.replace('#', '0x'), 16), alpha);
+	    this.renderer.setClearColor(
+	      parseInt(background.replace('#', '0x'), 16),
+	      alpha
+	    );
 	    this.renderer.sortObjects = false;
 	    this.renderer.setSize(width, height);
 	    this.renderer.shadowMap.enabled = false;
@@ -59260,10 +59315,10 @@ var ROS3D = (function (exports, ROSLIB) {
 	    this.camera.position.z = cameraPosition.z;
 	    // add controls to the camera
 	    this.cameraControls = new OrbitControls({
-	      scene : this.scene,
-	      camera : this.camera,
-	      displayPanAndZoomFrame : displayPanAndZoomFrame,
-	      lineTypePanAndZoomFrame: lineTypePanAndZoomFrame
+	      scene: this.scene,
+	      camera: this.camera,
+	      displayPanAndZoomFrame: displayPanAndZoomFrame,
+	      lineTypePanAndZoomFrame: lineTypePanAndZoomFrame,
 	    });
 	    this.cameraControls.userZoomSpeed = cameraZoomSpeed;
 
@@ -59276,15 +59331,15 @@ var ROS3D = (function (exports, ROSLIB) {
 	    this.selectableObjects = new THREE.Group();
 	    this.scene.add(this.selectableObjects);
 	    var mouseHandler = new MouseHandler({
-	      renderer : this.renderer,
-	      camera : this.camera,
-	      rootObject : this.selectableObjects,
-	      fallbackTarget : this.cameraControls
+	      renderer: this.renderer,
+	      camera: this.camera,
+	      rootObject: this.selectableObjects,
+	      fallbackTarget: this.cameraControls,
 	    });
 
 	    // highlights the receiver of mouse events
 	    this.highlighter = new Highlighter({
-	      mouseHandler : mouseHandler
+	      mouseHandler: mouseHandler,
 	    });
 
 	    this.stopped = true;
@@ -59301,7 +59356,7 @@ var ROS3D = (function (exports, ROSLIB) {
 	  /**
 	   *  Start the render loop
 	   */
-	  start(){
+	  start() {
 	    this.stopped = false;
 	    this.draw();
 	  };
@@ -59309,8 +59364,8 @@ var ROS3D = (function (exports, ROSLIB) {
 	  /**
 	   * Renders the associated scene to the viewer.
 	   */
-	  draw(){
-	    if(this.stopped){
+	  draw() {
+	    if (this.stopped) {
 	      // Do nothing if stopped
 	      return;
 	    }
@@ -59336,8 +59391,8 @@ var ROS3D = (function (exports, ROSLIB) {
 	  /**
 	   *  Stop the render loop
 	   */
-	  stop(){
-	    if(!this.stopped){
+	  stop() {
+	    if (!this.stopped) {
 	      // Stop animation render loop
 	      cancelAnimationFrame(this.animationRequestId);
 	    }
@@ -59359,6 +59414,15 @@ var ROS3D = (function (exports, ROSLIB) {
 	  };
 
 	  /**
+	   * Remove the given THREE Object3D from the global scene viewer.
+	   *
+	   * @param object
+	   */
+	  removeObject(object) {
+	    this.scene.remove(object);
+	  };
+
+	  /**
 	   * Resize 3D viewer
 	   *
 	   * @param width - new width value
@@ -59376,6 +59440,7 @@ var ROS3D = (function (exports, ROSLIB) {
 	exports.Axes = Axes;
 	exports.ColorOcTree = ColorOcTree;
 	exports.DepthCloud = DepthCloud;
+	exports.FlatCircle = FlatCircle;
 	exports.Grid = Grid;
 	exports.Highlighter = Highlighter;
 	exports.INTERACTIVE_MARKER_BUTTON = INTERACTIVE_MARKER_BUTTON;

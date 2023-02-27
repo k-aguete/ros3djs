@@ -55691,6 +55691,39 @@ var Grid = /*@__PURE__*/(function (superclass) {
   return Grid;
 }(THREE.Object3D));
 
+var FlatCircle = /*@__PURE__*/(function (superclass) {
+  function FlatCircle(options) {
+    options = options || {};
+    var radius = options.radius || 1;
+    var segments = options.segments || 32;
+    var color = options.color || '#cccccc';
+    var position = options.position || { x: 0, y: 0, z: 0 };
+    var orientation = options.orientation || { x: 0, y: 0, z: 0 };
+
+    superclass.call(this);
+
+    var material = new THREE.MeshBasicMaterial({
+      color: color,
+    });
+
+    var geometry = new THREE.CylinderGeometry(radius, radius, 0.01, segments, 1);
+
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.setFromVector3(
+      new THREE.Vector3(orientation.x, orientation.y, orientation.z)
+    );
+    mesh.position.set(position.x, position.y, position.z);
+
+    this.add(mesh);
+  }
+
+  if ( superclass ) FlatCircle.__proto__ = superclass;
+  FlatCircle.prototype = Object.create( superclass && superclass.prototype );
+  FlatCircle.prototype.constructor = FlatCircle;
+
+  return FlatCircle;
+}(THREE.Object3D));
+
 /**
  * @fileOverview
  * @author Russell Toris - rctoris@wpi.edu
@@ -57692,6 +57725,14 @@ var Urdf = /*@__PURE__*/(function (superclass) {
           }
           if (visual.geometry.type === ROSLIB__namespace.URDF_MESH) {
             var uri = visual.geometry.filename;
+            
+            try {
+              var uriTmp = new URL(uri);
+              uri = uriTmp.pathname;
+            } catch (error) {
+              console.warn('ROS3D mesh path parsing error: ', error);
+            }
+
             // in ROS2 filename is in absolute local path
             // e.g (file:/home/user/ros2_ws/install/xarm_description/share/xarm_description/meshes/xarm6/visual/base.stl)
             // '/share/' seems to be the common keyword, hence we strip it
@@ -57699,6 +57740,7 @@ var Urdf = /*@__PURE__*/(function (superclass) {
             if (tmpIndex !== -1) {
               uri = uri.substr(tmpIndex + ('/share/').length);
             }
+            
             var fileType = uri.substr(-3).toLowerCase();
 
             if (MeshLoader.loaders[fileType]) {
@@ -58688,20 +58730,26 @@ var Viewer = function Viewer(options) {
   var far = options.far || 1000;
   var alpha = options.alpha || 1.0;
   var cameraPosition = options.cameraPose || {
-    x : 3,
-    y : 3,
-    z : 3
+    x: 3,
+    y: 3,
+    z: 3,
   };
   var cameraZoomSpeed = options.cameraZoomSpeed || 0.5;
-  var displayPanAndZoomFrame = (options.displayPanAndZoomFrame === undefined) ? true : !!options.displayPanAndZoomFrame;
+  var displayPanAndZoomFrame =
+    options.displayPanAndZoomFrame === undefined
+      ? true
+      : !!options.displayPanAndZoomFrame;
   var lineTypePanAndZoomFrame = options.lineTypePanAndZoomFrame || 'full';
 
   // create the canvas to render to
   this.renderer = new THREE.WebGLRenderer({
-    antialias : antialias,
-    alpha: true
+    antialias: antialias,
+    alpha: true,
   });
-  this.renderer.setClearColor(parseInt(background.replace('#', '0x'), 16), alpha);
+  this.renderer.setClearColor(
+    parseInt(background.replace('#', '0x'), 16),
+    alpha
+  );
   this.renderer.sortObjects = false;
   this.renderer.setSize(width, height);
   this.renderer.shadowMap.enabled = false;
@@ -58717,10 +58765,10 @@ var Viewer = function Viewer(options) {
   this.camera.position.z = cameraPosition.z;
   // add controls to the camera
   this.cameraControls = new OrbitControls({
-    scene : this.scene,
-    camera : this.camera,
-    displayPanAndZoomFrame : displayPanAndZoomFrame,
-    lineTypePanAndZoomFrame: lineTypePanAndZoomFrame
+    scene: this.scene,
+    camera: this.camera,
+    displayPanAndZoomFrame: displayPanAndZoomFrame,
+    lineTypePanAndZoomFrame: lineTypePanAndZoomFrame,
   });
   this.cameraControls.userZoomSpeed = cameraZoomSpeed;
 
@@ -58733,15 +58781,15 @@ var Viewer = function Viewer(options) {
   this.selectableObjects = new THREE.Group();
   this.scene.add(this.selectableObjects);
   var mouseHandler = new MouseHandler({
-    renderer : this.renderer,
-    camera : this.camera,
-    rootObject : this.selectableObjects,
-    fallbackTarget : this.cameraControls
+    renderer: this.renderer,
+    camera: this.camera,
+    rootObject: this.selectableObjects,
+    fallbackTarget: this.cameraControls,
   });
 
   // highlights the receiver of mouse events
   this.highlighter = new Highlighter({
-    mouseHandler : mouseHandler
+    mouseHandler: mouseHandler,
   });
 
   this.stopped = true;
@@ -58757,15 +58805,15 @@ var Viewer = function Viewer(options) {
 /**
  *Start the render loop
  */
-Viewer.prototype.start = function start (){
+Viewer.prototype.start = function start () {
   this.stopped = false;
   this.draw();
 };
 /**
  * Renders the associated scene to the viewer.
  */
-Viewer.prototype.draw = function draw (){
-  if(this.stopped){
+Viewer.prototype.draw = function draw () {
+  if (this.stopped) {
     // Do nothing if stopped
     return;
   }
@@ -58790,8 +58838,8 @@ Viewer.prototype.draw = function draw (){
 /**
  *Stop the render loop
  */
-Viewer.prototype.stop = function stop (){
-  if(!this.stopped){
+Viewer.prototype.stop = function stop () {
+  if (!this.stopped) {
     // Stop animation render loop
     cancelAnimationFrame(this.animationRequestId);
   }
@@ -58811,6 +58859,14 @@ Viewer.prototype.addObject = function addObject (object, selectable) {
   }
 };
 /**
+ * Remove the given THREE Object3D from the global scene viewer.
+ *
+ * @param object
+ */
+Viewer.prototype.removeObject = function removeObject (object) {
+  this.scene.remove(object);
+};
+/**
  * Resize 3D viewer
  *
  * @param width - new width value
@@ -58827,6 +58883,7 @@ exports.Arrow2 = Arrow2;
 exports.Axes = Axes;
 exports.ColorOcTree = ColorOcTree;
 exports.DepthCloud = DepthCloud;
+exports.FlatCircle = FlatCircle;
 exports.Grid = Grid;
 exports.Highlighter = Highlighter;
 exports.INTERACTIVE_MARKER_BUTTON = INTERACTIVE_MARKER_BUTTON;
